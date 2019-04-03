@@ -14,12 +14,6 @@ class FetchContactsVC: UIViewController {
     // Outlets
     @IBOutlet weak var contactsTableView: UITableView!
     
-    // Constants
-    var contacts = [Contact]()
-    
-    // Variables
-    var storedArray = [CNContact]()
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -50,33 +44,7 @@ class FetchContactsVC: UIViewController {
     
     
     func retreiveContactsWithStore(store: CNContactStore) {
-        let keysToFetch = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName),CNContactPhoneNumbersKey,CNContactImageDataKey,CNContactEmailAddressesKey] as [Any]
-        let request = CNContactFetchRequest(keysToFetch: keysToFetch as! [CNKeyDescriptor])
-        var cnContacts = [CNContact]()
-        do {
-            try store.enumerateContacts(with: request){
-                (contact, cursor) -> Void in
-                cnContacts.append(contact)
-                self.storedArray = cnContacts
-            }
-        } catch let error {
-            print("Fetch contact error: \(error)")
-        }
-        
-        for contact in cnContacts {
-            let fullName = CNContactFormatter.string(from: contact, style: .fullName) ?? "No Name"
-            for phoneNum in contact.phoneNumbers {
-                if let num = phoneNum.value as? CNPhoneNumber,
-                    let label = phoneNum.label {
-                    let localisedLbl = CNLabeledValue<NSCopying & NSSecureCoding>.localizedString(forLabel: label)
-                    
-                    if ("\(localisedLbl)" == "home") {
-                        contacts.append(Contact(name: fullName, phoneNum: num.stringValue))
-                    }
-                }
-            }
-        }
-        DispatchQueue.main.async {
+        ContactsManager.shared.retreiveContactsWithStore(store: store) { (_) in
             self.contactsTableView.reloadData()
         }
     }
@@ -90,12 +58,12 @@ extension FetchContactsVC: UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return contacts.count
+        return ContactsManager.shared.contacts.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        let contact = contacts[indexPath.row]
+        let contact = ContactsManager.shared.contacts[indexPath.row]
         cell.textLabel?.text = contact.name
         cell.detailTextLabel?.text = contact.phoneNum
         return cell
